@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="mgecom-model">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../../Bibliotecas_Java/ejb/mgecom-model.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

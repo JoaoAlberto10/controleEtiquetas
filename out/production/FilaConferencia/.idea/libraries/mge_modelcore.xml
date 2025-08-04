@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="mge-modelcore">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../../Bibliotecas_Java/ejb/mge-modelcore.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -20,7 +20,6 @@ public class imprimirEtiquetas implements EventoProgramavelJava {
         String situacaoAnterior = notaVOold.asString("STATUSNOTA");
         int TOP = notaVO.asInt("CODTIPOPER");
 
-        // Verifica se a nota foi alterada de rascunho (ou outro status) para confirmada
         if ((!"L".equals(situacaoAnterior) && "L".equals(situacaoAtual)) && TOP == 406) {
             int nuNota = notaVO.asInt("NUNOTA");
             BigDecimal codEmp = notaVO.asBigDecimal("CODEMP");

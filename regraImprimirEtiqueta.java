@@ -89,6 +89,12 @@ public class regraImprimirEtiqueta implements RegraNegocioJava {
         sql.setNamedParameter("NUCONF", nuConf);
         sql.setNamedParameter("NUNOTA", nuNota);
         sql.executeUpdate();
+
+        NativeSql sql2 = new NativeSql(jdbc);
+        sql2.appendSql("UPDATE TGFCAB SET NUCONFATUAL = :NUCONF WHERE NUNOTA = :NUNOTA");
+        sql2.setNamedParameter("NUCONF", nuConf);
+        sql2.setNamedParameter("NUNOTA", nuNota);
+        sql2.executeUpdate();
     }
 
     private void gerarEtiquetas(BigDecimal nuNota, JdbcWrapper jdbc) throws Exception {

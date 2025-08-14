@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="SankhyaW-extensions">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../../Bibliotecas_Java/SankhyaW-extensions.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

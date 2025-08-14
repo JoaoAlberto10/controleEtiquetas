@@ -12,5 +12,7 @@
     <orderEntry type="library" name="sanutil" level="project" />
     <orderEntry type="library" name="mgecom-model" level="project" />
     <orderEntry type="library" name="mge-modelcore" level="project" />
+    <orderEntry type="library" name="javax.ejb-api-3.2.2" level="project" />
+    <orderEntry type="library" name="okhttp-3.14.9" level="project" />
   </component>
 </module>

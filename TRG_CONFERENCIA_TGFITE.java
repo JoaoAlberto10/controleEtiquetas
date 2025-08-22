@@ -16,86 +16,28 @@ import java.util.Map;
 public class TRG_CONFERENCIA_TGFITE implements EventoProgramavelJava {
 
     @Override public void beforeInsert(PersistenceEvent event) throws Exception {
-        validarConferencia((DynamicVO) event.getVo(), event);
+        DynamicVO vo = (DynamicVO) event.getVo();
+        JdbcWrapper jdbc = event.getJdbcWrapper();
+
+        BigDecimal top = obterTopDaNota(jdbc, vo.asBigDecimal("NUNOTA"));
+
+        // Só processa se for TOP 1700 ou 1701
+        if (top != null && (top.intValue() == 1700 || top.intValue() == 1701)) {
+            // 1) Valida conferência
+            validarConferencia(vo, event);
+
+            // 2) Se passou, gera etiqueta
+            gerarEtiquetaPalete(vo, jdbc);
+        }
+        // Caso contrário, não faz nada
     }
-    @Override public void beforeUpdate(PersistenceEvent event) throws Exception {
-        // validarConferencia((DynamicVO) event.getVo(), event);
-    }
+
+    @Override public void beforeUpdate(PersistenceEvent event) throws Exception {    }
     @Override public void afterDelete(PersistenceEvent event) {}
     @Override public void beforeCommit(TransactionContext tranCtx) {}
     @Override public void afterUpdate(PersistenceEvent event) throws Exception {}
     @Override public void beforeDelete(PersistenceEvent event) {}
-    @Override public void afterInsert(PersistenceEvent event)  throws Exception {
-        DynamicVO vo = (DynamicVO) event.getVo();
-        JdbcWrapper jdbc = event.getJdbcWrapper();
-        final BigDecimal nuNota  = vo.asBigDecimal("NUNOTA");
-        final BigDecimal codProd = vo.asBigDecimal("CODPROD");
-        final BigDecimal seqVol  = vo.asBigDecimal("AD_SEQVOL");
-        final BigDecimal codUsu  = vo.asBigDecimal("AD_CODUSUINC");
-        final String     codVol  = vo.asString("CODVOL");
-        final BigDecimal    codLocal   = vo.asBigDecimal("CODLOCALORIG");
-        final String     codBarraItem = vo.asString("CODBARRAPDV");
-
-        if (seqVol != null) {
-
-            // 1) capacidade do palete (TGFVOA.AD_QTDPALETE)
-            final Integer itensPorPalete = obterQtdPorPalete(jdbc, codProd, codVol);
-            if (itensPorPalete == null || itensPorPalete <= 0) {
-                return;
-            }
-
-            // 2) total atual de itens já gravados (sem contar o que está inserindo agora)
-            final int totalJaGravados = contarItensIvc(jdbc, nuNota, codProd, codVol, seqVol);
-
-            // 3.1) tipo do palete a partir do volume do item
-            final String tipoPalete;
-            if ("CX".equalsIgnoreCase(codVol)) tipoPalete = "PX";
-            else if ("CN".equalsIgnoreCase(codVol)) tipoPalete = "PN";
-            else tipoPalete = codVol; // fallback: mesmo volume
-
-            // 3.2) número sequencial do palete dentro do grupo
-            String seqPalete3 = String.format("%03d", seqVol.intValue());
-
-            // 3.3) construir CODBARRA do palete: <CODPROD><tipoPalete>-<NUCONF>-<seqPalete3>
-            final String codBarraPalete = codProd.toPlainString() + tipoPalete + "-" +
-                    nuNota.toPlainString() + "-" + seqPalete3;
-
-                NativeSql upd = new NativeSql(jdbc);
-                upd.appendSql("UPDATE AD_FTICODBARRAITEM SET CODBARRAPALETE = :PAL WHERE CODBARRA = :ETI AND CODBARRAPALETE IS NULL");
-                upd.setNamedParameter("PAL", codBarraPalete);
-                upd.setNamedParameter("ETI", codBarraItem);
-                upd.executeUpdate();
-
-
-            // 3.7) inserir etiqueta do palete em TGFBAR (se ainda não existir)
-            if (itensPorPalete == totalJaGravados) {
-                NativeSql ins = new NativeSql(jdbc);
-                ins.appendSql(
-                        "INSERT INTO AD_FTICODBARRAPALETE (NROCONFIG, CODBARRAPALETE, CODPROD, CODVOL, DHINC, CODUSU, CODLOCAL, NUNOTA) " +
-                                "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :LOCAL, :NUNOTA)"
-                );
-                ins.setNamedParameter("CODBARRA", codBarraPalete);
-                ins.setNamedParameter("CODPROD", codProd);
-                ins.setNamedParameter("CODVOL", tipoPalete);      // PX/PN (ou fallback)
-                ins.setNamedParameter("CODUSU", codUsu);
-                ins.setNamedParameter("LOCAL", codLocal);
-                ins.setNamedParameter("NUNOTA", nuNota);
-                ins.executeUpdate();
-
-                String localPrinterName = "168.90.183.146:9091/ZD230CPO02001";
-                PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
-                reportService.set("printer.name", localPrinterName);
-                reportService.set("nurfe", 287);
-                reportService.set("codemp", BigDecimal.ONE);
-
-                Map<String, Object> parameters = new HashMap<>();
-                parameters.put("P_CODBARRA", codBarraPalete);
-                reportService.set("report.params", parameters);
-                System.out.println("Executando o relatório - ASM_SNK");
-                reportService.execute();
-            }
-        }
-    }
+    @Override public void afterInsert(PersistenceEvent event)  throws Exception {    }
 
     private void validarConferencia(DynamicVO notaVO, PersistenceEvent event) throws Exception {
         BigDecimal nuNota = notaVO.asBigDecimal("NUNOTA");
@@ -225,5 +167,91 @@ public class TRG_CONFERENCIA_TGFITE implements EventoProgramavelJava {
         if (rs.next()) c = rs.getInt(1);
         rs.close();
         return c;
+    }
+
+    private BigDecimal obterTopDaNota(JdbcWrapper jdbc, BigDecimal nuNota) throws Exception {
+        NativeSql sql = new NativeSql(jdbc);
+        sql.appendSql("SELECT CODTIPOPER FROM TGFCAB WHERE NUNOTA = :NUNOTA");
+        sql.setNamedParameter("NUNOTA", nuNota);
+        try (ResultSet rs = sql.executeQuery()) {
+            if (rs.next()) return rs.getBigDecimal("CODTIPOPER");
+        }
+        return null;
+    }
+
+    private void gerarEtiquetaPalete(DynamicVO vo, JdbcWrapper jdbc) throws Exception {
+        final BigDecimal nuNota  = vo.asBigDecimal("NUNOTA");
+        final BigDecimal codProd = vo.asBigDecimal("CODPROD");
+        final BigDecimal seqVol  = vo.asBigDecimal("AD_SEQVOL");
+        final BigDecimal codUsu  = vo.asBigDecimal("AD_CODUSUINC");
+        final String     codVol  = vo.asString("CODVOL");
+        final BigDecimal codLocal= vo.asBigDecimal("CODLOCALORIG");
+        final String     codBarraItem = vo.asString("CODBARRAPDV");
+
+        if (seqVol == null) return;
+
+        Integer itensPorPalete = obterQtdPorPalete(jdbc, codProd, codVol);
+        if (itensPorPalete == null || itensPorPalete <= 0) return;
+
+        int totalJaGravados = contarItensIvc(jdbc, nuNota, codProd, codVol, seqVol) + 1;
+
+        String tipoPalete;
+        if ("CX".equalsIgnoreCase(codVol)) tipoPalete = "PX";
+        else if ("CN".equalsIgnoreCase(codVol)) tipoPalete = "PN";
+        else tipoPalete = codVol;
+
+        String seqPalete3 = String.format("%03d", seqVol.intValue());
+        String codBarraPalete = codProd.toPlainString() + tipoPalete + "-" +
+                nuNota.toPlainString() + "-" + seqPalete3;
+
+        // Atualiza código de barras
+        NativeSql upd = new NativeSql(jdbc);
+        upd.appendSql("UPDATE AD_FTICODBARRAITEM SET CODBARRAPALETE = :PAL WHERE CODBARRA = :ETI AND CODBARRAPALETE IS NULL");
+        upd.setNamedParameter("PAL", codBarraPalete);
+        upd.setNamedParameter("ETI", codBarraItem);
+        upd.executeUpdate();
+
+        // Insere etiqueta de palete se completar
+        if (itensPorPalete == totalJaGravados) {
+            NativeSql ins = new NativeSql(jdbc);
+            ins.appendSql(
+                    "INSERT INTO AD_FTICODBARRAPALETE (NROCONFIG, CODBARRAPALETE, CODPROD, CODVOL, DHINC, CODUSU, CODLOCAL, NUNOTA) " +
+                            "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :LOCAL, :NUNOTA)"
+            );
+            ins.setNamedParameter("CODBARRA", codBarraPalete);
+            ins.setNamedParameter("CODPROD", codProd);
+            ins.setNamedParameter("CODVOL", tipoPalete);
+            ins.setNamedParameter("CODUSU", codUsu);
+            ins.setNamedParameter("LOCAL", codLocal);
+            ins.setNamedParameter("NUNOTA", nuNota);
+            ins.executeUpdate();
+
+            String localPrinterName = obterImpressora(jdbc, codLocal);
+
+            // String localPrinterName = "168.90.183.146:9091/ZD230CPO01";
+            PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
+            reportService.set("printer.name", localPrinterName); // localPrinterName
+            reportService.set("nurfe", 287);
+            reportService.set("codemp", BigDecimal.ONE);
+
+
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("P_CODBARRA", codBarraPalete);
+            reportService.set("report.params", parameters);
+            System.out.println("Executando o relatório - ASM_SNK");
+            reportService.execute();
+        }
+    }
+
+    private String obterImpressora(JdbcWrapper jdbc, BigDecimal codLocal) throws Exception {
+        NativeSql sql = new NativeSql(jdbc);
+        sql.appendSql("SELECT IMPRESSORA FROM AD_FTICONFERENCIAIMPRES WHERE CODLOCAL = :CODLOCAL");
+        sql.setNamedParameter("CODLOCAL", codLocal);
+        try (ResultSet rs = sql.executeQuery()) {
+            if (rs.next()) {
+                return rs.getString("IMPRESSORA");
+            }
+        }
+        return "?";
     }
 }

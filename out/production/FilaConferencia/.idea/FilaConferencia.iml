@@ -7,12 +7,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="SankhyaW-extensions" level="project" />
-    <orderEntry type="library" name="jape" level="project" />
-    <orderEntry type="library" name="sanutil" level="project" />
-    <orderEntry type="library" name="mgecom-model" level="project" />
-    <orderEntry type="library" name="mge-modelcore" level="project" />
-    <orderEntry type="library" name="javax.ejb-api-3.2.2" level="project" />
-    <orderEntry type="library" name="okhttp-3.14.9" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="SankhyaW-extensions" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="jape" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="mge-modelcore" level="project" />
   </component>
 </module>

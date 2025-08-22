@@ -1,5 +1,3 @@
-//package br.com.sankhya.action.eventosprogramaveis;
-
 import br.com.sankhya.extensions.regrasnegocio.ContextoRegra;
 import br.com.sankhya.extensions.regrasnegocio.RegraNegocioJava;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -15,7 +13,6 @@ import java.util.Map;
 public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
     public void executa(ContextoRegra contexto) throws Exception {
         BigDecimal nuNota = contexto.getNunota();
-        String localPrinterName = "168.90.183.146:9091/ZD230CPO02001";
         try {
             gerarEtiquetas(nuNota, contexto.getJdbcWrapper());
             System.out.println("Etiquetas geradas com sucesso.");
@@ -25,26 +22,30 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
         }
 
         NativeSql cabecalho = new NativeSql(contexto.getJdbcWrapper());
-        cabecalho.appendSql("SELECT CODUSUINC, CODEMP, CODTIPOPER FROM TGFCAB WHERE NUNOTA = :NUNOTA");
+        cabecalho.appendSql("SELECT CODUSUINC, CODEMP, CODTIPOPER, AD_CODLOCALORIG FROM TGFCAB WHERE NUNOTA = :NUNOTA");
         cabecalho.setNamedParameter("NUNOTA", nuNota);
         ResultSet cab = cabecalho.executeQuery();
+
+        BigDecimal codLocal = null;
 
         if (cab.next()) {
             BigDecimal codUsu = cab.getBigDecimal("CODUSUINC");
             BigDecimal codEmp = cab.getBigDecimal("CODEMP");
             BigDecimal codTop = cab.getBigDecimal("CODTIPOPER");
+            codLocal = cab.getBigDecimal("AD_CODLOCALORIG");
             Parametros param = carregarParametros(contexto.getJdbcWrapper(), codTop.intValue());
             BigDecimal nuConf = gerarNovoNumero(contexto.getJdbcWrapper(), "AD_FTICONFERENCIA", codEmp);
-            inserirConferencia(contexto.getJdbcWrapper(), nuConf, nuNota, codUsu, param.topConf, param.formaVolumes);
+            inserirConferencia(contexto.getJdbcWrapper(), nuConf, nuNota, codUsu, param.topConf, param.formaVolumes, codLocal);
             System.out.println("Registro AD_FTICONFERENCIA inserido com sucesso.");
         } else {
             System.err.println("Cabeçalho da nota " + nuNota + " não encontrado.");
         }
         cab.close();
 
+        String localPrinterName = obterImpressora(contexto.getJdbcWrapper(), codLocal);
 
         PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
-        reportService.set("printer.name", "?"); // localPrinterName
+        reportService.set("printer.name", localPrinterName); // localPrinterName
         reportService.set("nurfe", 283);
         reportService.set("codemp", BigDecimal.ONE);
 
@@ -110,15 +111,16 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
         return novoNumero;
     }
 
-    private void inserirConferencia(JdbcWrapper jdbc, BigDecimal nuConf, BigDecimal nuNota, BigDecimal codUsuConf, int codTop, String formaVolume) throws Exception {
+    private void inserirConferencia(JdbcWrapper jdbc, BigDecimal nuConf, BigDecimal nuNota, BigDecimal codUsuConf, int codTop, String formaVolume, BigDecimal codLocal) throws Exception {
         NativeSql sql = new NativeSql(jdbc);
-        sql.appendSql("INSERT INTO AD_FTICONFERENCIA (NUCONF, NUNOTAORIG, DHINC, STATUS, CODUSU, TOPCONF, FORMAVOLUMES) " +
-                "VALUES (:NUCONF, :NUNOTA,  SYSDATE, 'P', :CODUSU, :TOP, :FORMAVOLUMES)");
+        sql.appendSql("INSERT INTO AD_FTICONFERENCIA (NUCONF, NUNOTAORIG, DHINC, STATUS, CODUSU, TOPCONF, FORMAVOLUMES, CODLOCAL) " +
+                "VALUES (:NUCONF, :NUNOTA,  SYSDATE, 'P', :CODUSU, :TOP, :FORMAVOLUMES, :CODLOCAL)");
         sql.setNamedParameter("CODUSU", codUsuConf);
         sql.setNamedParameter("NUNOTA", nuNota);
         sql.setNamedParameter("NUCONF", nuConf);
         sql.setNamedParameter("TOP", codTop);
         sql.setNamedParameter("FORMAVOLUMES", formaVolume);
+        sql.setNamedParameter("CODLOCAL", codLocal);
         sql.executeUpdate();
     }
 
@@ -162,5 +164,17 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
             }
         }
         rs.close();
+    }
+
+    private String obterImpressora(JdbcWrapper jdbc, BigDecimal codLocal) throws Exception {
+        NativeSql sql = new NativeSql(jdbc);
+        sql.appendSql("SELECT IMPRESSORA FROM AD_FTICONFERENCIAIMPRES WHERE CODLOCAL = :CODLOCAL");
+        sql.setNamedParameter("CODLOCAL", codLocal);
+        try (ResultSet rs = sql.executeQuery()) {
+            if (rs.next()) {
+                return rs.getString("IMPRESSORA");
+            }
+        }
+        return "?";
     }
 }

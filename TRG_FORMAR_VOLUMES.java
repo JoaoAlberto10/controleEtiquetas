@@ -85,7 +85,7 @@ public class TRG_FORMAR_VOLUMES implements EventoProgramavelJava {
 
         // 3.7) inserir etiqueta do palete em TGFBAR (se ainda não existir)
         if (!existeCodBarra(jdbc, codBarraPalete)) {
-            NativeSql ins = new NativeSql(jdbc);
+            /*NativeSql ins = new NativeSql(jdbc);
             ins.appendSql(
                     "INSERT INTO TGFBAR (CODBARRA, CODPROD, CODVOL, DHALTER, CODUSU, AD_LOCAL, AD_NUNOTA) " +
                             "VALUES (:CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :AD_LOCAL, :AD_NUNOTA)"
@@ -96,18 +96,17 @@ public class TRG_FORMAR_VOLUMES implements EventoProgramavelJava {
             ins.setNamedParameter("CODUSU",   ctx.codUsu != null ? ctx.codUsu : BigDecimal.ZERO);
             ins.setNamedParameter("AD_LOCAL", ctx.codLocal);
             ins.setNamedParameter("AD_NUNOTA",ctx.nunota);
-            ins.executeUpdate();
+            ins.executeUpdate();*/
 
-            String localPrinterName = "168.90.183.146:9091/ZD230CPO02002";
+            String localPrinterName = "168.90.183.146:9091/ZD230CPO01";
             PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
-            reportService.set("printer.name", localPrinterName);
+            reportService.set("printer.name", "168.90.183.146:9091/ZD230CPO01"); // localPrinterName
             reportService.set("nurfe", 287);
             reportService.set("codemp", BigDecimal.ONE);
 
+
             Map<String, Object> parameters = new HashMap<>();
-            parameters.put("P_NUNOTA", ctx.nunota);
-            parameters.put("P_NUCONF", nuConf);
-            parameters.put("P_CODBARRA", codBarraPalete);
+            parameters.put("P_CODBARRA", "103033PX-435633-002");
             reportService.set("report.params", parameters);
             System.out.println("Executando o relatório - ASM_SNK");
             reportService.execute();

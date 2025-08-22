@@ -2,12 +2,8 @@
   <artifact type="jar" name="FilaConferencia:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/FilaConferencia_jar</output-path>
     <root id="archive" name="FilaConferencia.jar">
-      <element id="module-output" name="FilaConferencia" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/../../../Bibliotecas_Java/SankhyaW-extensions.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/../../../Bibliotecas_Java/ejb/mge-modelcore.jar" path-in-jar="/" />
       <element id="extracted-dir" path="$PROJECT_DIR$/../../../Bibliotecas_Java/SankhyaOm/jape.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/../../../Bibliotecas_Java/SankhyaOm/sanutil.jar" path-in-jar="/" />
-      <element id="extracted-dir" path="$PROJECT_DIR$/../../../Bibliotecas_Java/ejb/mgecom-model.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>

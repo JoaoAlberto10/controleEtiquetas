@@ -12,8 +12,12 @@ public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
         int nuNota = notaVO.asInt("NUNOTA");
         int codTipOper = notaVO.asInt("CODTIPOPER");
 
-        if (codTipOper == 406 || codTipOper == 407) {
-            JdbcWrapper jdbc = event.getJdbcWrapper();
+        JdbcWrapper jdbc = event.getJdbcWrapper();
+
+        if (codTipOper == 1700 || codTipOper == 1701) {
+            apagarCONFERENCIA(jdbc, nuNota);
+        }
+        if (codTipOper == 406) {
             apagarBARCODE(jdbc, nuNota);
         }
     }
@@ -26,15 +30,30 @@ public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
             sql.executeUpdate();
 
             NativeSql sql2 = new NativeSql(jdbc);
+            sql2.appendSql("DELETE FROM AD_FTICONFERENCIA WHERE NUNOTA = :NUNOTA");
+            sql2.setNamedParameter("NUNOTA", nuNota);
+            sql2.executeUpdate();
+        } catch (Exception e) {
+            System.err.println("Erro ao deletar etiquetas da nota " + nuNota + ": " + e.getMessage());
+        }
+    }
+
+    private void apagarCONFERENCIA(JdbcWrapper jdbc, int nuNota) {
+        try {
+            NativeSql sql = new NativeSql(jdbc);
+            sql.appendSql("UPDATE AD_FTICONFERENCIA SET NUNOTACONF = NULL WHERE NUNOTACONF = :NUNOTA");
+            sql.setNamedParameter("NUNOTA", nuNota);
+            sql.executeUpdate();
+
+            NativeSql sql2 = new NativeSql(jdbc);
             sql2.appendSql("DELETE FROM AD_FTICODBARRAPALETE WHERE NUNOTA = :NUNOTA");
             sql2.setNamedParameter("NUNOTA", nuNota);
             sql2.executeUpdate();
 
             NativeSql sql3 = new NativeSql(jdbc);
-            sql3.appendSql("DELETE FROM AD_FTICONFERENCIA WHERE NUNOTAORIG = :NUNOTA");
+            sql3.appendSql("UPDATE AD_FTICONFERENCIA SET NUNOTACONF = NULL WHERE NUNOTACONF = :NUNOTA");
             sql3.setNamedParameter("NUNOTA", nuNota);
             sql3.executeUpdate();
-            System.out.println("Etiquetas da nota " + nuNota + " removidas.");
         } catch (Exception e) {
             System.err.println("Erro ao deletar etiquetas da nota " + nuNota + ": " + e.getMessage());
         }

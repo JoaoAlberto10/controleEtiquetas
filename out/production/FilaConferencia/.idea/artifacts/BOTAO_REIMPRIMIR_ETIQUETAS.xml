@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="BOTAO_REIMPRIMIR_ETIQUETAS">
+    <output-path>$PROJECT_DIR$/jar</output-path>
+    <root id="archive" name="BOTAO_REIMPRIMIR_ETIQUETAS.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/FilaConferencia/BOTAO_REIMPRIMIR_ETIQUETAS.class" />
+    </root>
+  </artifact>
+</component>

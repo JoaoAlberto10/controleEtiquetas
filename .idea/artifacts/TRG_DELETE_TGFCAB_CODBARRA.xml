@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TRG_DELETE_TGFCAB_CODBARRA">
+    <output-path>$PROJECT_DIR$/jar</output-path>
+    <root id="archive" name="TRG_DELETE_TGFCAB_CODBARRA.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/FilaConferencia/TRG_DELETE_TGFCAB_CODBARRA.class" />
+    </root>
+  </artifact>
+</component>

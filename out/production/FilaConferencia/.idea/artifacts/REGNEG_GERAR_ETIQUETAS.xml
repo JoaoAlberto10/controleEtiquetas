@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="REGNEG_GERAR_ETIQUETAS">
+    <output-path>$PROJECT_DIR$/jar</output-path>
+    <root id="archive" name="REGNEG_GERAR_ETIQUETAS.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/FilaConferencia/REGNEG_GERAR_ETIQUETAS.class" />
+      <element id="file-copy" path="$PROJECT_DIR$/out/production/FilaConferencia/REGNEG_GERAR_ETIQUETAS$Parametros.class" />
+    </root>
+  </artifact>
+</component>

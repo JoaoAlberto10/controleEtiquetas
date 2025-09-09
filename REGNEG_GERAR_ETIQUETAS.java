@@ -29,13 +29,7 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
         BigDecimal codLocal = null;
 
         if (cab.next()) {
-            BigDecimal codUsu = cab.getBigDecimal("CODUSUINC");
-            BigDecimal codEmp = cab.getBigDecimal("CODEMP");
-            BigDecimal codTop = cab.getBigDecimal("CODTIPOPER");
             codLocal = cab.getBigDecimal("AD_CODLOCALORIG");
-            Parametros param = carregarParametros(contexto.getJdbcWrapper(), codTop.intValue());
-            BigDecimal nuConf = gerarNovoNumero(contexto.getJdbcWrapper(), "AD_FTICONFERENCIA", codEmp);
-            inserirConferencia(contexto.getJdbcWrapper(), nuConf, nuNota, codUsu, param.topConf, param.formaVolumes, codLocal);
             System.out.println("Registro AD_FTICONFERENCIA inserido com sucesso.");
         } else {
             System.err.println("Cabeçalho da nota " + nuNota + " não encontrado.");
@@ -43,10 +37,9 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
         cab.close();
 
         String localPrinterName = obterImpressora(contexto.getJdbcWrapper(), codLocal);
-
         PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
         reportService.set("printer.name", localPrinterName); // localPrinterName
-        reportService.set("nurfe", 283);
+        reportService.set("nurfe", 285);
         reportService.set("codemp", BigDecimal.ONE);
 
         Map<String, Object> parameters = new HashMap<>();
@@ -62,74 +55,14 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
         int topConf;          // 1700 ou 1701
     }
 
-    private Parametros carregarParametros(JdbcWrapper jdbc, int codTop) throws Exception {
-        Parametros p = new Parametros();
 
-            NativeSql q = new NativeSql(jdbc);
-            q.appendSql("SELECT TIPOCONFERENCIA, FORMAVOLUMES FROM AD_FTICONFERENCIAPARAM WHERE TOP = :TOP");
-            q.setNamedParameter("TOP", codTop);
-            try (ResultSet rs = q.executeQuery()) {
-                if (rs.next()) {
-                    p.tipoConf = rs.getString("TIPOCONFERENCIA");
-                    p.formaVolumes = rs.getString("FORMAVOLUMES");
-                } else {
-                    // defaults se não houver linha
-                    p.tipoConf = "E";
-                    p.formaVolumes = "S";
-                }
-            }
-
-        // regra solicitada: E => 1700, S => 1701
-        p.topConf = "E".equalsIgnoreCase(p.tipoConf) ? 1700 : 1701;
-        return p;
-    }
-
-    private BigDecimal gerarNovoNumero(JdbcWrapper jdbc, String arquivo, BigDecimal codEmp) throws Exception {
-        BigDecimal novoNumero = null;
-
-        // 1. Seleciona com trava
-        NativeSql select = new NativeSql(jdbc);
-        select.appendSql("SELECT T.ULTCOD FROM TGFNUM T WHERE T.ARQUIVO = :ARQ AND T.CODEMP = :EMP FOR UPDATE");
-        select.setNamedParameter("ARQ", arquivo);
-        select.setNamedParameter("EMP", codEmp);
-        ResultSet rs = select.executeQuery();
-
-        if (rs.next()) {
-            BigDecimal ultCod = rs.getBigDecimal("ULTCOD");
-            novoNumero = ultCod.add(BigDecimal.ONE);
-
-            // 2. Atualiza TGFNUM com novo código
-            NativeSql update = new NativeSql(jdbc);
-            update.appendSql("UPDATE TGFNUM SET ULTCOD = :NOVO WHERE ARQUIVO = :ARQ AND CODEMP = :EMP");
-            update.setNamedParameter("NOVO", novoNumero);
-            update.setNamedParameter("ARQ", arquivo);
-            update.setNamedParameter("EMP", codEmp);
-            update.executeUpdate();
-        }
-        rs.close();
-
-        return novoNumero;
-    }
-
-    private void inserirConferencia(JdbcWrapper jdbc, BigDecimal nuConf, BigDecimal nuNota, BigDecimal codUsuConf, int codTop, String formaVolume, BigDecimal codLocal) throws Exception {
-        NativeSql sql = new NativeSql(jdbc);
-        sql.appendSql("INSERT INTO AD_FTICONFERENCIA (NUCONF, NUNOTAORIG, DHINC, STATUS, CODUSU, TOPCONF, FORMAVOLUMES, CODLOCAL) " +
-                "VALUES (:NUCONF, :NUNOTA,  SYSDATE, 'P', :CODUSU, :TOP, :FORMAVOLUMES, :CODLOCAL)");
-        sql.setNamedParameter("CODUSU", codUsuConf);
-        sql.setNamedParameter("NUNOTA", nuNota);
-        sql.setNamedParameter("NUCONF", nuConf);
-        sql.setNamedParameter("TOP", codTop);
-        sql.setNamedParameter("FORMAVOLUMES", formaVolume);
-        sql.setNamedParameter("CODLOCAL", codLocal);
-        sql.executeUpdate();
-    }
 
     private void gerarEtiquetas(BigDecimal nuNota, JdbcWrapper jdbc) throws Exception {
         NativeSql sql = new NativeSql(jdbc);
         sql.appendSql(
                 "SELECT CODPROD, CODVOL, CODBARRA, CODLOCALORIG, CODUSUINC, SUM(QUANTIDADE) AS QUANTIDADE FROM (SELECT ITE.CODPROD, ITE.CODVOL, " +
                         "CASE WHEN ITE.CODVOL = PRO.CODVOL THEN ITE.QTDNEG ELSE ITE.QTDNEG / VOA.QUANTIDADE END AS QUANTIDADE, " +
-                        "VOA.CODBARRA, ITE.CODLOCALORIG, CAB.CODUSUINC " +
+                        "VOA.AD_CODBARRAINTERNO AS CODBARRA, ITE.CODLOCALORIG, CAB.CODUSUINC " +
                         "FROM TGFCAB CAB " +
                         "JOIN TGFITE ITE ON ITE.NUNOTA = CAB.NUNOTA " +
                         "JOIN TGFPRO PRO ON ITE.CODPROD = PRO.CODPROD " +
@@ -151,16 +84,16 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
                 String codBarraGerado = codBarra + "-" + nuNota + "-" + String.format("%03d", seq);
 
                 NativeSql insertSql = new NativeSql(jdbc);
-                insertSql.appendSql("INSERT INTO AD_FTICODBARRAITEM (NROCONFIG, CODBARRA, CODPROD, CODVOL, DHINC, CODUSU, CODLOCAL, NUNOTA) " +
-                        "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :CODLOCAL, :NUNOTA)");
+                insertSql.appendSql("INSERT INTO AD_FTICODBARRAITEM (NROCONFIG, CODBARRA, CODPROD, CODVOL, DHINC, CODUSU, NUNOTA, ATIVO) " +
+                        "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :NUNOTA, 'S')");
                 insertSql.setNamedParameter("CODBARRA", codBarraGerado);
                 insertSql.setNamedParameter("CODPROD", codProd);
                 insertSql.setNamedParameter("CODVOL", codVol);
                 insertSql.setNamedParameter("CODUSU", codUsu);
-                insertSql.setNamedParameter("CODLOCAL", codLocal);
                 insertSql.setNamedParameter("NUNOTA", nuNota);
 
                 insertSql.executeUpdate();
+                
             }
         }
         rs.close();

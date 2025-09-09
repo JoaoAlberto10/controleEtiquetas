@@ -4,22 +4,38 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.sql.NativeSql;
 import br.com.sankhya.jape.vo.DynamicVO;
+import java.sql.ResultSet;
 
 
 public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
-    @Override public void afterDelete(PersistenceEvent event) {
-        DynamicVO notaVO = (DynamicVO) event.getVo();
+    @Override public void beforeDelete(PersistenceEvent event) throws Exception{DynamicVO notaVO = (DynamicVO) event.getVo();
         int nuNota = notaVO.asInt("NUNOTA");
         int codTipOper = notaVO.asInt("CODTIPOPER");
 
         JdbcWrapper jdbc = event.getJdbcWrapper();
 
-        if (codTipOper == 1700 || codTipOper == 1701) {
-            apagarCONFERENCIA(jdbc, nuNota);
+        NativeSql sqlCheck = new NativeSql(jdbc);
+        sqlCheck.appendSql(
+                "SELECT 1 FROM AD_FTICONFERENCIA " +
+                        "WHERE NUNOTAORIG = :NUNOTA " +
+                        "AND NUNOTACONF IS NOT NULL"
+        );
+        sqlCheck.setNamedParameter("NUNOTA", nuNota);
+
+        try (ResultSet rs = sqlCheck.executeQuery()) {
+            if (rs.next()) {
+                throw new Exception("Não é permitido excluir a nota " + nuNota +
+                        " pois existe conferência vinculada.");
+            }
         }
-        if (codTipOper == 406) {
+
+        if (codTipOper == 1700 || codTipOper == 1701 || codTipOper == 1702 || codTipOper == 1703) {
+            apagarCONFERENCIA(jdbc, nuNota);
+        } else {
             apagarBARCODE(jdbc, nuNota);
         }
+
+
     }
 
     private void apagarBARCODE(JdbcWrapper jdbc, int nuNota) {
@@ -30,7 +46,7 @@ public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
             sql.executeUpdate();
 
             NativeSql sql2 = new NativeSql(jdbc);
-            sql2.appendSql("DELETE FROM AD_FTICONFERENCIA WHERE NUNOTA = :NUNOTA");
+            sql2.appendSql("DELETE FROM AD_FTICONFERENCIA WHERE NUNOTAORIG = :NUNOTA");
             sql2.setNamedParameter("NUNOTA", nuNota);
             sql2.executeUpdate();
         } catch (Exception e) {
@@ -58,10 +74,10 @@ public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
             System.err.println("Erro ao deletar etiquetas da nota " + nuNota + ": " + e.getMessage());
         }
     }
-    @Override public void afterUpdate(PersistenceEvent event) throws Exception {}
+    @Override public void afterDelete(PersistenceEvent event) {}
+    @Override public void afterUpdate(PersistenceEvent event) {}
     @Override public void beforeInsert(PersistenceEvent event) {}
     @Override public void beforeUpdate(PersistenceEvent event) {}
-    @Override public void beforeDelete(PersistenceEvent event) {}
     @Override public void afterInsert(PersistenceEvent event) {}
     @Override public void beforeCommit(TransactionContext tranCtx) {}
 }

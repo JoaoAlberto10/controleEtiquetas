@@ -29,9 +29,9 @@ public class TRG_DELETE_TGFCAB_CODBARRA implements EventoProgramavelJava {
             }
         }
 
-        if (codTipOper == 1700 || codTipOper == 1701 || codTipOper == 1702 || codTipOper == 1703) {
+        if (codTipOper == 1700 || codTipOper == 1701 || codTipOper == 1702 || codTipOper == 1703|| codTipOper == 1704) {
             apagarCONFERENCIA(jdbc, nuNota);
-        } else {
+        } else if (codTipOper == 406) {
             apagarBARCODE(jdbc, nuNota);
         }
 

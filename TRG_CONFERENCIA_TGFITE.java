@@ -1,5 +1,6 @@
 import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.EntityFacade;
+import br.com.sankhya.jape.PersistenceException;
 import br.com.sankhya.jape.bmp.PersistentLocalEntity;
 import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.event.PersistenceEvent;
@@ -73,6 +74,7 @@ public class TRG_CONFERENCIA_TGFITE implements EventoProgramavelJava {
             validarConferencia(vo, event, top);
             gerarEtiquetaPalete(vo, jdbc, top);
         }
+
     }
 
     @Override

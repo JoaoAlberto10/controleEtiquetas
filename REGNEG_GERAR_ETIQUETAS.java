@@ -60,14 +60,14 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
     private void gerarEtiquetas(BigDecimal nuNota, JdbcWrapper jdbc) throws Exception {
         NativeSql sql = new NativeSql(jdbc);
         sql.appendSql(
-                "SELECT CODPROD, CODVOL, CODBARRA, CODLOCALORIG, CODUSUINC, SUM(QUANTIDADE) AS QUANTIDADE FROM (SELECT ITE.CODPROD, ITE.CODVOL, " +
+                "SELECT CODPROD, CODVOL, CODBARRA, CODLOCALORIG, CODUSUINC, SUM(QUANTIDADE) AS QUANTIDADE, DTNEG, PRAZOVAL FROM (SELECT ITE.CODPROD, ITE.CODVOL, " +
                         "CASE WHEN ITE.CODVOL = PRO.CODVOL THEN ITE.QTDNEG ELSE ITE.QTDNEG / VOA.QUANTIDADE END AS QUANTIDADE, " +
-                        "VOA.AD_CODBARRAINTERNO AS CODBARRA, ITE.CODLOCALORIG, CAB.CODUSUINC " +
+                        "VOA.AD_CODBARRAINTERNO AS CODBARRA, ITE.CODLOCALORIG, CAB.CODUSUINC, TO_CHAR(CAB.DTNEG, 'DD/MM/YYYY') AS DTNEG, TO_CHAR(CAB.DTNEG+NVL(PRO.PRAZOVAL,28), 'DD/MM/YYYY') AS PRAZOVAL " +
                         "FROM TGFCAB CAB " +
                         "JOIN TGFITE ITE ON ITE.NUNOTA = CAB.NUNOTA " +
                         "JOIN TGFPRO PRO ON ITE.CODPROD = PRO.CODPROD " +
                         "JOIN TGFVOA VOA ON VOA.CODPROD = PRO.CODPROD AND VOA.CODVOL = ITE.CODVOL " +
-                        "WHERE ITE.NUNOTA = :NUNOTA) GROUP BY CODPROD, CODVOL, CODBARRA, CODLOCALORIG, CODUSUINC"
+                        "WHERE ITE.NUNOTA = :NUNOTA) GROUP BY CODPROD, CODVOL, CODBARRA, CODLOCALORIG, CODUSUINC, DTNEG, PRAZOVAL"
         );
         sql.setNamedParameter("NUNOTA", nuNota);
         ResultSet rs = sql.executeQuery();
@@ -79,18 +79,22 @@ public class REGNEG_GERAR_ETIQUETAS implements RegraNegocioJava {
             int quantidade = rs.getBigDecimal("QUANTIDADE").intValue();
             BigDecimal codLocal = rs.getBigDecimal("CODLOCALORIG");
             BigDecimal codUsu = rs.getBigDecimal("CODUSUINC");
+            String dtNeg = rs.getString("DTNEG");
+            String dtVenc = rs.getString("PRAZOVAL");
 
             for (int seq = 1; seq <= quantidade; seq++) {
                 String codBarraGerado = codBarra + "-" + nuNota + "-" + String.format("%03d", seq);
 
                 NativeSql insertSql = new NativeSql(jdbc);
-                insertSql.appendSql("INSERT INTO AD_FTICODBARRAITEM (NROCONFIG, CODBARRA, CODPROD, CODVOL, DHINC, CODUSU, NUNOTA, ATIVO) " +
-                        "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :NUNOTA, 'S')");
+                insertSql.appendSql("INSERT INTO AD_FTICODBARRAITEM (NROCONFIG, CODBARRA, CODPROD, CODVOL, DHINC, CODUSU, NUNOTA, ATIVO, DTPROD, DTVAL) " +
+                        "VALUES (1, :CODBARRA, :CODPROD, :CODVOL, SYSDATE, :CODUSU, :NUNOTA, 'S', :DTPROD, :DTVAL)");
                 insertSql.setNamedParameter("CODBARRA", codBarraGerado);
                 insertSql.setNamedParameter("CODPROD", codProd);
                 insertSql.setNamedParameter("CODVOL", codVol);
                 insertSql.setNamedParameter("CODUSU", codUsu);
                 insertSql.setNamedParameter("NUNOTA", nuNota);
+                insertSql.setNamedParameter("DTPROD", dtNeg);
+                insertSql.setNamedParameter("DTVAL", dtVenc);
 
                 insertSql.executeUpdate();
                 

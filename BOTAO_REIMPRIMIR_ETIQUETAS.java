@@ -38,7 +38,7 @@ public class BOTAO_REIMPRIMIR_ETIQUETAS implements AcaoRotinaJava {
         String localPrinterName = obterImpressora(jdbc, codLocal);
 
         PlatformService reportService = PlatformServiceFactory.getInstance().lookupService("@core:report.service");
-        reportService.set("printer.name", localPrinterName); // localPrinterName
+        reportService.set("printer.name", "?"); // localPrinterName
         reportService.set("nurfe", 285);
         reportService.set("codemp", BigDecimal.ONE);
 

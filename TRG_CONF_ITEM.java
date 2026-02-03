@@ -803,7 +803,7 @@ public class TRG_CONF_ITEM implements EventoProgramavelJava {
                 "SELECT 1 " +
                         "  FROM AD_FTICONFERENCIA C " +
                         "  JOIN TGFCAB CAB ON CAB.NUNOTA = C.NUNOTAORIG " +
-                        " WHERE C.NUCONF = :NUCONF " +
+                        " WHERE C.NUNOTAORIG = :NUCONF " +
                         "   AND CAB.TIPMOV = 'P'"
         );
         chkPV.setNamedParameter("NUCONF", nuNotaOrig);
